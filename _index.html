@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Hint</title>
+	
+	<style>
+		html, body { height: 100%; margin: 0; }
+		#viewport { position: relative; height: 100%; background: #FFFFFF; }
+	</style>
+
+	
+</head>
+<body>
+	
+
+
+	<div id="viewport"></div>
+
+	<script src="physics/physicsjs.js"></script>
+	<script src="physics/canvas.js"></script>
+	<script src="physics/body-collision-detection.js"></script>
+	<script src="physics/edge-collision-detection.js"></script>
+	<script src="physics/circle.js"></script>
+	<script src="physics/body-circle.js"></script>
+	<script src="physics/body-impulse-response.js"></script>
+	<script src="physics/sweep-prune.js"></script>
+	<script>
+
+		Physics(function(world){
+
+			var viewWidth = window.innerWidth;
+			var viewHeight = window.innerHeight;
+
+
+			var renderer = Physics.renderer('canvas', {
+				el: 'viewport',
+				width: viewWidth,
+				height: viewHeight,
+				meta: false
+			});
+
+
+			world.add( renderer );
+			world.on('step', function(){
+
+				var bodies = world.getBodies();
+
+				// WATCH THE CIRCLES SEE IF THEY GO OFF THE EDGE, IF THEY DO MAKE NEW ONES
+				for (i = 0; i < bodies.length; i++) {
+					var x = bodies[i].state.pos.x;
+					var y = bodies[i].state.pos.y;
+					if (x > viewWidth + 40 || x < -40 || y > viewHeight + 40 || y < -40 ) { 
+						world.removeBody(bodies[i]);
+						addCircle();
+					}
+
+				}
+
+			world.render();
+			});
+
+
+			// ADDING THEM BEHAVIOURS
+			world.add( Physics.behavior('body-collision-detection') );
+			world.add( Physics.behavior('sweep-prune') );
+			world.add( Physics.behavior('body-impulse-response') );
+
+
+			// ARRAY OF COLORS HERE TO PICK FROM
+			var colors = ['#3a4cec','#05ffbe'];
+
+			function nextColor(color) {
+				current = colors.indexOf(color);
+
+				if (current + 1 === colors.length) {
+					return colors[0];
+				} else {
+					return colors[current + 1];
+				}
+			}
+
+
+			// AMOUNT OF CIRCLES
+			var count = 40;
+
+			function addCircle(){
+
+				var side = Math.floor(Math.random() * 4);
+
+				var radius = Math.floor(Math.random() * 20) + 5; // SIZE RANGE OF THE CIRCLE
+				var speed = 0.05;
+				var x;
+				var y;
+				var vx;
+				var vy;
+
+				if ( side === 0 ) {
+
+					// NORTHE
+					var x = Math.random() * viewWidth;
+					var y = 0 - radius;
+					var vx = Math.random() > 0.5 ? -speed : speed;
+					var vy = speed;
+
+				} else if ( side === 1) {
+
+					// EASTERLY
+					var x = viewWidth + radius;
+					var y = Math.random() * viewHeight;
+					var vx = -speed;
+					var vy = Math.random() > 0.5 ? -speed : speed;
+
+				} else if ( side === 2 ) {
+
+					// SOUITHE
+					var x = Math.random() * viewWidth;
+					var y = viewHeight + radius;
+					var vx = Math.random() > 0.5 ? -speed : speed;
+					var vy = -speed;
+
+				} else if ( side === 3 ) {
+
+					// WESTHE
+					var x = 0 - radius;
+					var y = Math.random() * viewHeight;
+					var vx = speed;
+					var vy = Math.random() > 0.5 ? -speed : speed;
+
+				}
+
+				circle = Physics.body('circle', {
+				    x: x, 
+				    y: y, 
+				    vx: Math.random() * vx, 
+				    vy: Math.random() * vy, 
+				    radius: radius,
+				    styles: {
+				    	fillStyle: colors[0]
+				    }
+				})
+
+				world.add(circle);
+			};
+
+			for ( i = 0; i < count; i++) {
+				addCircle();
+			}
+
+			// WHEN THEY COLLIDE CHANGE THE COLOR ON TO THE NEXT ONE
+			world.on('collisions:detected', function( data ){
+
+				for ( i = 0; i < data.collisions.length; i++) {
+
+			    	var bodyA = data.collisions[i].bodyA;
+			    	var bodyB = data.collisions[i].bodyB;
+
+			    	bodyA.view = undefined;
+			    	bodyB.view = undefined;
+
+			    	bodyA.options({ styles: { fillStyle: nextColor(bodyA.styles.fillStyle) }}, true);
+			    	bodyB.options({ styles: { fillStyle: nextColor(bodyB.styles.fillStyle) }}, true);
+
+				}
+					
+			});
+
+			Physics.util.ticker.on(function( time, dt ){
+			  world.step( time );
+			});
+
+			Physics.util.ticker.start();
+
+		});
+
+	</script>
+
+</body>
+</html>
